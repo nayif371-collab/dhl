@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NewsPulse — Article</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{--bg:#0c1117;--panel:#0f1621;--soft:#131c27;--brand:#e50914;--text:#e6edf3;--muted:#94a3b8;--rad:16px;--stroke:1px solid rgba(255,255,255,.08);--max:900px}
+  *{box-sizing:border-box} body{margin:0;background:#0b0f14;color:var(--text);font-family:Inter,system-ui}
+  a{color:inherit;text-decoration:none}
+  header{position:sticky;top:0;background:rgba(16,22,29,.85);backdrop-filter:blur(10px);border-bottom:var(--stroke)}
+  .nav{max-width:var(--max);margin:auto;display:flex;gap:16px;align-items:center;padding:12px 16px}
+  .logo{font-weight:800;font-size:22px}.logo b{color:var(--brand)}
+  main{max-width:var(--max);margin:18px auto;padding:0 16px;display:grid;gap:16px}
+  .card{background:var(--panel);border:var(--stroke);border-radius:var(--rad);padding:18px}
+  .kicker{font-size:12px;letter-spacing:.18em;color:#ffb4b8}
+  h1{margin:.2em 0 .4em;font-size:28px}
+  .muted{color:var(--muted)}
+  .hero{height:260px;background:linear-gradient(180deg,#182231,#0f1621);border-radius:12px;margin:10px 0}
+  .related{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .mini{background:#131c27;border:var(--stroke);border-radius:12px;padding:12px;cursor:pointer}
+  .mini .thumb{height:72px;background:#1b2736;border-radius:10px;margin-bottom:8px}
+  form{display:grid;gap:10px;margin-top:10px}
+  input,textarea{width:100%;background:#131c27;color:var(--text);border:var(--stroke);border-radius:10px;padding:10px}
+  button{border:none;background:var(--brand);color:#fff;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
+  .comment{background:#131c27;border:var(--stroke);border-radius:12px;padding:12px}
+  @media (max-width:800px){.related{grid-template-columns:1fr 1fr}}
+  @media (max-width:560px){.related{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <nav class="nav">
+    <div class="logo"><b>NEWS</b>Pulse</div>
+    <a href="index.html">Home</a>
+    <a href="categories.html">Categories</a>
+  </nav>
+</header>
+ 
+<main>
+  <article class="card" id="article">
+    <div class="kicker" id="cat"></div>
+    <h1 id="title"></h1>
+    <div class="muted" id="meta"></div>
+    <div class="hero"></div>
+    <div id="content" style="line-height:1.7"></div>
+  </article>
+ 
+  <section class="card">
+    <h3>Related</h3>
+    <div class="related" id="related"></div>
+  </section>
+ 
+  <section class="card">
+    <h3>Comments</h3>
+    <div id="comments"></div>
+    <form onsubmit="return addComment(event)">
+      <input id="cname" placeholder="Your name (optional)">
+      <textarea id="ctext" rows="3" placeholder="Write a comment..." required></textarea>
+      <button>Post Comment</button>
+    </form>
+  </section>
+</main>
+ 
+<script>
+(function seed(){
+  if(localStorage.getItem('newsData')) return;
+  const now = Date.now();
+  const mk=(id,t,c,a,m)=>({id,title:t,category:c,author:a,created:now-m*60000,excerpt:'...',content:'...',views:200});
+  const data=[ mk('w1','Global summit seeks climate accord','World','Amara',35),
+               mk('t1','AI breakthrough promises faster chips','Tech','Usman',22),
+               mk('s1','Thriller finish lifts Karachi side','Sports','Ayesha',9)];
+  localStorage.setItem('newsData', JSON.stringify(data));
+  localStorage.setItem('comments', JSON.stringify({}));
+})();
+function getData(){ return JSON.parse(localStorage.getItem('newsData')||'[]'); }
+function setData(d){ localStorage.setItem('newsData', JSON.stringify(d)); }
+function getComments(){ return JSON.parse(localStorage.getItem('comments')||'{}'); }
+function setComments(c){ localStorage.setItem('comments', JSON.stringify(c)); }
+ 
+const params = new URLSearchParams(location.search);
+const id = params.get('id');
+const data = getData();
+const art = data.find(x=>x.id===id) || data[0];
+ 
+(function render(){
+  if(!art) { document.getElementById('article').innerHTML = 'Article not found.'; return; }
+  // increment views
+  art.views++; setData(data);
+ 
+  document.getElementById('cat').textContent = art.category.toUpperCase();
+  document.getElementById('title').textContent = art.title;
+  document.getElementById('meta').textContent = `By ${art.author} • ${new Date(art.created).toLocaleString()} • ${art.views} views`;
+  document.getElementById('content').innerHTML = art.content;
+ 
+  // related
+  const related = data.filter(x=>x.category===art.category && x.id!==art.id).slice(0,6);
+  document.getElementById('related').innerHTML = related.map(x=>`
+    <div class="mini" onclick="openArticle('${x.id}')">
+      <div class="thumb"></div>
+      <div><strong>${x.title}</strong><div class="muted">${new Date(x.created).toLocaleDateString()}</div></div>
+    </div>
+  `).join('') || `<div class="muted">No related articles yet.</div>`;
+ 
+  // comments
+  renderComments();
+})();
+ 
+function openArticle(aid){ window.location.href=`article.html?id=${encodeURIComponent(aid)}`; }
+ 
+function renderComments(){
+  const box = document.getElementById('comments');
+  const all = getComments(); const list = all[id]||[];
+  box.innerHTML = list.map(c=>`
+    <div class="comment">
+      <div style="font-weight:700">${c.name||'Anonymous'}</div>
+      <div class="muted" style="font-size:12px">${new Date(c.ts).toLocaleString()}</div>
+      <div style="margin-top:6px">${c.text}</div>
+    </div>
+  `).join('') || `<div class="muted">Be the first to comment.</div>`;
+}
+function addComment(e){
+  e.preventDefault();
+  const name = document.getElementById('cname').value.trim();
+  const text = document.getElementById('ctext').value.trim();
+  if(!text) return false;
+  const all = getComments(); all[id]=all[id]||[];
+  all[id].push({name,text,ts:Date.now()}); setComments(all);
+  document.getElementById('ctext').value=''; renderComments();
+  return false;
+}
+</script>
+</body>
+</html>
