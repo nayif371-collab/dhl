@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NewsPulse — Search</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{--bg:#0c1117;--panel:#0f1621;--soft:#131c27;--brand:#e50914;--text:#e6edf3;--muted:#94a3b8;--rad:16px;--stroke:1px solid rgba(255,255,255,.08);--max:1000px}
+  *{box-sizing:border-box} body{margin:0;background:#0b0f14;color:var(--text);font-family:Inter,system-ui}
+  a{color:inherit;text-decoration:none}
+  header{position:sticky;top:0;background:rgba(16,22,29,.85);backdrop-filter:blur(10px);border-bottom:var(--stroke)}
+  .nav{max-width:var(--max);margin:auto;display:flex;gap:16px;align-items:center;padding:12px 16px}
+  .logo{font-weight:800;font-size:22px}.logo b{color:var(--brand)}
+  main{max-width:var(--max);margin:18px auto;padding:0 16px;display:grid;gap:16px}
+  .card{background:var(--panel);border:var(--stroke);border-radius:var(--rad);padding:16px}
+  .search{display:flex;gap:8px;align-items:center;background:var(--soft);padding:8px 10px;border-radius:12px;border:var(--stroke)}
+  .search input{all:unset;flex:1}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .mini{display:flex;gap:12px;background:#131c27;border:var(--stroke);border-radius:12px;padding:12px}
+  .thumb{width:96px;height:72px;background:#1b2736;border-radius:10px}
+  @media (max-width:760px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <nav class="nav">
+    <div class="logo"><b>NEWS</b>Pulse</div>
+    <a href="index.html">Home</a>
+    <a href="categories.html">Categories</a>
+  </nav>
+</header>
+ 
+<main>
+  <section class="card">
+    <form class="search" onsubmit="return doSearch(event)">
+      <input id="q" placeholder="Search headlines, categories, authors...">
+      <button style="border:none;background:var(--brand);color:#fff;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer">Search</button>
+    </form>
+    <div id="hint" style="color:var(--muted);margin-top:8px"></div>
+  </section>
+ 
+  <section class="card">
+    <h3>Results</h3>
+    <div class="grid" id="results"></div>
+  </section>
+</main>
+ 
+<script>
+(function seed(){
+  if(localStorage.getItem('newsData')) return;
+  const now = Date.now();
+  const mk=(id,t,c,a,m)=>({id,title:t,category:c,author:a,created:now-m*60000,excerpt:'...',content:'...',views:200});
+  const data=[ mk('w1','Global summit seeks climate accord','World','Amara',35),
+               mk('t1','AI breakthrough promises faster chips','Tech','Usman',22) ];
+  localStorage.setItem('newsData', JSON.stringify(data));
+  localStorage.setItem('comments', JSON.stringify({}));
+})();
+function getData(){ return JSON.parse(localStorage.getItem('newsData')||'[]'); }
+function viewArticle(id){ window.location.href=`article.html?id=${encodeURIComponent(id)}`; }
+ 
+const params = new URLSearchParams(location.search);
+const initQ = params.get('q')||'';
+document.getElementById('q').value = initQ;
+if(initQ) runSearch(initQ);
+ 
+function doSearch(e){ e.preventDefault(); const q=document.getElementById('q').value.trim(); runSearch(q); return false; }
+ 
+function runSearch(q){
+  document.getElementById('hint').textContent = q?`Results for “${q}”`:'';
+  const rx = new RegExp(q.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\$&'), 'i');
+  const data = getData();
+  const results = data.filter(a=> rx.test(a.title)||rx.test(a.excerpt)||rx.test(a.category)||rx.test(a.author));
+  const box = document.getElementById('results');
+  if(!results.length){ box.innerHTML = '<div style=\"color:#94a3b8\">No matches found.</div>'; return; }
+  box.innerHTML = results.map(x=>`
+    <div class="mini" onclick="viewArticle('${x.id}')" style="cursor:pointer">
+      <div class="thumb"></div>
+      <div>
+        <h3 style="margin:0 0 6px">${x.title}</h3>
+        <div style="color:#94a3b8">${x.category} • By ${x.author} • ${new Date(x.created).toLocaleDateString()}</div>
+        <p style="color:#94a3b8;margin:8px 0 0">${x.excerpt}</p>
+      </div>
+    </div>
+  `).join('');
+}
+</script>
+</body>
+</html>
