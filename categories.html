@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NewsPulse — Categories</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{--bg:#0c1117;--panel:#0f1621;--soft:#131c27;--brand:#e50914;--text:#e6edf3;--muted:#94a3b8;--rad:16px;--stroke:1px solid rgba(255,255,255,.08);--max:1200px}
+  *{box-sizing:border-box} body{margin:0;background:#0b0f14;color:var(--text);font-family:Inter,system-ui}
+  a{color:inherit;text-decoration:none}
+  header{position:sticky;top:0;background:rgba(16,22,29,.85);backdrop-filter:blur(10px);border-bottom:var(--stroke);z-index:20}
+  .nav{max-width:var(--max);margin:auto;display:flex;gap:16px;align-items:center;padding:12px 16px}
+  .logo{font-weight:800;font-size:22px}.logo b{color:var(--brand)}
+  .spacer{flex:1}
+  .tabs{max-width:var(--max);margin:18px auto;padding:0 16px;display:flex;gap:10px;flex-wrap:wrap}
+  .tab{padding:10px 14px;border:var(--stroke);border-radius:999px;background:#141c28;cursor:pointer}
+  .tab.active{background:var(--brand)}
+  main{max-width:var(--max);margin:14px auto;padding:0 16px;display:grid;gap:18px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .card{background:var(--panel);border:var(--stroke);border-radius:var(--rad);padding:14px}
+  .mini{display:flex;gap:12px;background:var(--soft);border:var(--stroke);border-radius:12px;padding:12px}
+  .thumb{width:96px;height:72px;background:#1b2736;border-radius:10px}
+  .section h2{margin:4px 0 10px}
+  @media (max-width:1000px){.grid{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:700px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <nav class="nav">
+    <div class="logo"><b>NEWS</b>Pulse</div>
+    <a href="index.html">Home</a>
+    <a href="categories.html" style="opacity:.8">Categories</a>
+    <div class="spacer"></div>
+    <a href="#" onclick="goSearch(event)">Search</a>
+  </nav>
+</header>
+ 
+<div class="tabs" id="tabs"></div>
+ 
+<main id="container"></main>
+ 
+<script>
+/* Shared data init */
+(function seed(){
+  if(localStorage.getItem('newsData')) return;
+  // If someone opens this file first, ensure data exists
+  const now = Date.now();
+  const mk=(id,t,cat,au,m)=>({id,title:t,category:cat,author:au,created:now-m*60000,excerpt:'...',content:'...',views:Math.floor(Math.random()*900)+50});
+  const data=[ mk('w1','Global summit seeks climate accord','World','Amara',35),
+               mk('p1','Parliament debates landmark reform bill','Politics','Hassan',54),
+               mk('b1','Markets rally as inflation cools','Business','Sara',15),
+               mk('t1','AI breakthrough promises faster chips','Tech','Usman',22),
+               mk('s1','Thriller finish lifts Karachi side','Sports','Ayesha',9),
+               mk('e1','Blockbuster sets new weekend record','Entertainment','Mina',29),
+               mk('t2','New smartphone lineup leaked','Tech','Bilal',6)];
+  localStorage.setItem('newsData', JSON.stringify(data));
+  localStorage.setItem('comments', JSON.stringify({}));
+})();
+ 
+function getData(){ return JSON.parse(localStorage.getItem('newsData')||'[]'); }
+function goSearch(e){ e.preventDefault(); window.location.href='search.html'; }
+function viewArticle(id){ 
+  const d=getData(); const it=d.find(x=>x.id===id); if(it){ it.views++; localStorage.setItem('newsData',JSON.stringify(d)); }
+  window.location.href=`article.html?id=${encodeURIComponent(id)}`;
+}
+ 
+const cats = ['Trending','World','Politics','Business','Tech','Sports','Entertainment'];
+ 
+function renderTabs(active){
+  const tabs = document.getElementById('tabs');
+  tabs.innerHTML = cats.map(c=>`<button class="tab ${c===active?'active':''}" onclick="activate('${c}')">${c}</button>`).join('');
+}
+ 
+function activate(cat){
+  renderTabs(cat);
+  const data = getData();
+  let items = [];
+  if(cat==='Trending'){ items = [...data].sort((a,b)=>b.views-a.views).slice(0,9); }
+  else{ items = data.filter(x=>x.category===cat).sort((a,b)=>b.created-a.created); }
+  const chunk = (arr,n)=>arr.reduce((acc,_,i)=> (i%n?acc:acc.concat([arr.slice(i,i+n)])),[]);
+  const rows = chunk(items,3);
+  const container = document.getElementById('container');
+  container.innerHTML = rows.map(row=>`
+    <div class="grid">
+      ${row.map(x=>`
+        <article class="card">
+          <div class="mini" onclick="viewArticle('${x.id}')" style="cursor:pointer">
+            <div class="thumb"></div>
+            <div>
+              <h3 style="margin:0 0 6px">${x.title}</h3>
+              <div style="color:#94a3b8">${x.category} • ${new Date(x.created).toLocaleString()} • ${x.views} views</div>
+              <p style="color:#94a3b8;margin:8px 0 0">${x.excerpt}</p>
+            </div>
+          </div>
+        </article>
+      `).join('')}
+    </div>
+  `).join('') || `<div style="opacity:.7">No articles yet in ${cat}.</div>`;
+}
+ 
+(function init(){
+  const hash = decodeURIComponent(location.hash.replace('#','')) || 'Trending';
+  activate(cats.includes(hash)?hash:'Trending');
+})();
+</script>
+</body>
+</html>
